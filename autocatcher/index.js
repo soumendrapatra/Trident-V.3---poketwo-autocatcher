@@ -17,6 +17,7 @@ class AutoCatcher {
     this.token = token;
     this.client = new Client();
     this.captcha = false;
+    this.lastCaptchaSolvedAt = 0;
     this.catch = true;
     this.aiCatch = false;
     this.stats = {
@@ -421,12 +422,14 @@ class AutoCatcher {
           this.captcha = true;
           try {
             await message.react(`🔒`);
-
-            await sendCaptchaMessage(
-              this.client.user.globalName || this.client.user.displayName,
-              this.client.user.id,
-              "detected"
-            );
+            const solvedRecently = Date.now() - this.lastCaptchaSolvedAt < 120000;
+            if (!solvedRecently) {
+              await sendCaptchaMessage(
+                this.client.user.globalName || this.client.user.displayName,
+                this.client.user.id,
+                "detected"
+              );
+            }
 
             try {
               const startTime = Date.now();
@@ -448,7 +451,9 @@ class AutoCatcher {
 
               console.log(`🎯 AutoCatcher Captcha Result:`, JSON.stringify(solveResult, null, 2));
 
-              if (solveResult.success) {
+              const solved = solveResult && (solveResult.success === true || solveResult.success === "true");
+              if (solved) {
+                this.lastCaptchaSolvedAt = Date.now();
                 await sendCaptchaMessage(
                   this.client.user.globalName || this.client.user.displayName,
                   this.client.user.id,
